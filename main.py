@@ -249,8 +249,8 @@ def eval_board(board):
     nb_lines = len(board)
     nb_rows = len(board[0])
 
-    max_ai = 0
-    max_human = 0
+    max_ai = 0.0
+    max_human = 0.0
 
     i = nb_lines - 1
     while i >= 0:
@@ -260,13 +260,13 @@ def eval_board(board):
 
             if player_piece_checked is not None:
 
-                max_up = 1
-                max_left = 1
-                max_right = 1
-                max_down_left = 1
-                max_down_right = 1
-                max_up_left = 1
-                max_up_right = 1
+                max_up = 1.0
+                max_left = 1.0
+                max_right = 1.0
+                max_down_left = 1.0
+                max_down_right = 1.0
+                max_up_left = 1.0
+                max_up_right = 1.0
 
                 still_checking_up = True
                 still_checking_left = True
@@ -283,9 +283,9 @@ def eval_board(board):
                     # no need to evaluate if the first piece has less than 4 possible other pieces to connect
                     if i - 3 >= 0 and still_checking_up:
 
-                        # if we found a cell not of the same nature than player_piece_checked,
+                        # if we find a cell not of the same nature than player_piece_checked,
                         # we know this not four in a row
-                        # if the cell not of the same nature is a None, there is still a way to
+                        # if the not-of-the-same-nature cell is a None, there is still a way to
                         # make a 4 in a row on this line
                         # but if it has been countered, there is no more way and it's like we have a solo piece
                         if board[i - k][j] is None:
@@ -308,6 +308,30 @@ def eval_board(board):
                         # explained before
                         if board[i][j + k] is None:
                             still_checking_right = False
+
+                            # add .2 for each same-nature piece than player_piece_checked
+                            # on the same line but not connected yet
+                            # make max_right at 1 if there is a not-same-nature piece on the same line
+                            if k == 1 or k == 2:
+                                for l in range(k + 1, 4):
+                                    if board[i][j + l] == (1 if player_piece_checked == 2 else 2):
+                                        max_right = 1
+                                        break
+                                    if board[i][j + l] == player_piece_checked:
+                                        max_right += 0.2
+
+
+                            # remove .1 for each empty cell under the first empty cell
+                            # on the right of the connected pieces
+                            l = i + 1
+                            while l < nb_lines:
+                                if board[l][j + k] is None:
+                                    max_right -= 0.1
+                                else:
+                                    break
+
+                                l += 1
+
                         elif board[i][j + k] != player_piece_checked:
                             max_right = 1
                             still_checking_right = False
@@ -326,6 +350,29 @@ def eval_board(board):
                         # explained before
                         if board[i][j - k] is None:
                             still_checking_left = False
+
+                            # add .2 for each same-nature piece than player_piece_checked
+                            # on the same line but not connected yet
+                            # make max_left at 1 if there is a not-same-nature piece on the same line
+                            if k == 1 or k == 2:
+                                for l in range(k + 1, 4):
+                                    if board[i][j - l] == (1 if player_piece_checked == 2 else 2):
+                                        max_left = 1
+                                        break
+                                    if board[i][j - l] == player_piece_checked:
+                                        max_left += 0.2
+
+                            # remove .1 for each empty cell under the first empty cell
+                            # on the left of the connected pieces
+                            l = i + 1
+                            while l < nb_lines:
+                                if board[l][j - k] is None:
+                                    max_left -= 0.1
+                                else:
+                                    break
+
+                                l += 1
+
                         elif board[i][j - k] != player_piece_checked:
                             max_left = 1
                             still_checking_left = False
