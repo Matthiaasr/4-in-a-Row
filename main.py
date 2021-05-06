@@ -312,21 +312,31 @@ def eval_board(board):
                             # add .2 for each same-nature piece than player_piece_checked
                             # on the same line but not connected yet
                             # make max_right at 1 if there is a not-same-nature piece on the same line
-                            if k == 1 or k == 2:
-                                for l in range(k + 1, 4):
-                                    if board[i][j + l] == (1 if player_piece_checked == 2 else 2):
-                                        max_right = 1
-                                        break
-                                    if board[i][j + l] == player_piece_checked:
-                                        max_right += 0.2
+                            for l in range(k + 1, 4):
+                                if board[i][j + l] == (1 if player_piece_checked == 2 else 2):
+                                    max_right = 1
+                                    break
 
+                                elif board[i][j + l] == player_piece_checked:
+                                    max_right += 0.2
 
-                            # remove .1 for each empty cell under the first empty cell
+                                elif board[i][j + l] is None:
+                                    # remove .05 for each empty cell under each empty cell aligned
+                                    m = i + 1
+                                    while m < nb_lines:
+                                        if board[m][j + l] is None:
+                                            max_right -= 0.05
+                                        else:
+                                            break
+
+                                        m += 1
+
+                            # remove .05 for each empty cell under the first empty cell
                             # on the right of the connected pieces
                             l = i + 1
                             while l < nb_lines:
                                 if board[l][j + k] is None:
-                                    max_right -= 0.1
+                                    max_right -= 0.05
                                 else:
                                     break
 
@@ -355,19 +365,30 @@ def eval_board(board):
                             # on the same line but not connected yet
                             # make max_left at 1 if there is a not-same-nature piece on the same line
                             if k == 1 or k == 2:
-                                for l in range(k + 1, 4):
-                                    if board[i][j - l] == (1 if player_piece_checked == 2 else 2):
-                                        max_left = 1
-                                        break
-                                    if board[i][j - l] == player_piece_checked:
-                                        max_left += 0.2
+                                if board[i][j - l] == (1 if player_piece_checked == 2 else 2):
+                                    max_left = 1
+                                    break
 
-                            # remove .1 for each empty cell under the first empty cell
+                                elif board[i][j - l] == player_piece_checked:
+                                    max_left += 0.2
+
+                                elif board[i][j - l] is None:
+                                    # remove .05 for each empty cell under each empty cell aligned
+                                    m = i + 1
+                                    while m < nb_lines:
+                                        if board[m][j - l] is None:
+                                            max_left -= 0.05
+                                        else:
+                                            break
+
+                                        m += 1
+
+                            # remove .05 for each empty cell under the first empty cell
                             # on the left of the connected pieces
                             l = i + 1
                             while l < nb_lines:
                                 if board[l][j - k] is None:
-                                    max_left -= 0.1
+                                    max_left -= 0.05
                                 else:
                                     break
 
