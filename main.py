@@ -392,6 +392,18 @@ def eval_board(board):
                         # explained before
                         if board[i + k][j - k] is None:
                             still_checking_down_left = False
+
+                            # add .2 for each same-nature piece than player_piece_checked
+                            # on the same line but not connected yet
+                            # make max_down_left at 1 if there is a not-same-nature piece on the same line
+                            if k == 1 or k == 2:
+                                for l in range(k + 1, 4):
+                                    if board[i + l][j - l] == (1 if player_piece_checked == 2 else 2):
+                                        max_down_left = 1
+                                        break
+                                    if board[i + l][j - l] == player_piece_checked:
+                                        max_down_left += 0.2
+
                         elif board[i + k][j - k] != player_piece_checked:
                             max_down_left = 1
                             still_checking_down_left = False
@@ -411,6 +423,18 @@ def eval_board(board):
                         # explained before
                         if board[i + k][j + k] is None:
                             still_checking_down_right = False
+
+                            # add .2 for each same-nature piece than player_piece_checked
+                            # on the same line but not connected yet
+                            # make max_down_right at 1 if there is a not-same-nature piece on the same line
+                            if k == 1 or k == 2:
+                                for l in range(k + 1, 4):
+                                    if board[i + l][j + l] == (1 if player_piece_checked == 2 else 2):
+                                        max_down_right = 1
+                                        break
+                                    if board[i + l][j + l] == player_piece_checked:
+                                        max_down_right += 0.2
+
                         elif board[i + k][j + k] != player_piece_checked:
                             max_down_right = 1
                             still_checking_down_right = False
@@ -430,6 +454,18 @@ def eval_board(board):
                         # explained before
                         if board[i - k][j - k] is None:
                             still_checking_up_left = False
+
+                            # add .2 for each same-nature piece than player_piece_checked
+                            # on the same line but not connected yet
+                            # make max_up_left at 1 if there is a not-same-nature piece on the same line
+                            if k == 1 or k == 2:
+                                for l in range(k + 1, 4):
+                                    if board[i - l][j - l] == (1 if player_piece_checked == 2 else 2):
+                                        max_up_left = 1
+                                        break
+                                    if board[i - l][j - l] == player_piece_checked:
+                                        max_up_left += 0.2
+
                         elif board[i - k][j - k] != player_piece_checked:
                             max_up_left = 1
                             still_checking_up_left = False
@@ -449,6 +485,18 @@ def eval_board(board):
                         # explained before
                         if board[i - k][j + k] is None:
                             still_checking_up_right = False
+
+                            # add .2 for each same-nature piece than player_piece_checked
+                            # on the same line but not connected yet
+                            # make max_up_right at 1 if there is a not-same-nature piece on the same line
+                            if k == 1 or k == 2:
+                                for l in range(k + 1, 4):
+                                    if board[i - l][j + l] == (1 if player_piece_checked == 2 else 2):
+                                        max_up_right = 1
+                                        break
+                                    if board[i - l][j + l] == player_piece_checked:
+                                        max_up_right += 0.2
+
                         elif board[i - k][j + k] != player_piece_checked:
                             max_up_right = 1
                             still_checking_up_right = False
