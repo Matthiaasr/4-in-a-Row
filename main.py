@@ -4,13 +4,15 @@
 #
 # ---------------------------------------------------------------------------------------------------------------------
 
+# import time
+
 # ---------------------------------------------------------------------------------------------------------------------
 #
 #                                                   FUNCTIONS AI
 #
 # ---------------------------------------------------------------------------------------------------------------------
 
-# ------alpha_beta(board, depth, player, alpha, beta)------
+# ------pvs(board, depth, alpha, beta)------
 # Arguments :
 #   board : list of list - describes the current state of the game
 #   depth : int - describes the current depth in the graph (0 is a leaf)
@@ -31,32 +33,108 @@
 #
 #   max or min of all children moves depending at what depth we are
 
-def alpha_beta(board, depth, alpha, beta):
+def pvs(board, depth, alpha, beta, call_lvl=0):
     nb_rows = len(board[0])
-    depth_max = 4
 
-    winner, advantage = eval_board(board)
-    if depth == 0 or winner is not False:
-        return advantage
+    if depth == 0 or check_winner(board) is not False:
+        return eval_board(board)
+
+    else:
+        best_row = 0
+
+        update_board(board, 1 if call_lvl % 2 == 0 else 2, best_row)
+
+        current = - pvs(board, depth - 1, -beta, -alpha, call_lvl=call_lvl + 1)
+
+        undo_board(board, best_row)
+
+        if current >= alpha:
+            alpha = current
+
+        if current < beta:
+
+            for i in range(1, nb_rows):
+                if row_played_check(board, i):
+                    update_board(board, 1 if call_lvl % 2 == 0 else 2, i)
+
+                    value_pvs = - pvs(board, depth - 1, -(alpha + 1), -alpha, call_lvl=call_lvl + 1)
+
+                    if value_pvs > alpha and value_pvs < beta:
+                        value_pvs = - pvs(board, depth - 1, -beta, -alpha, call_lvl=call_lvl + 1)
+
+                    undo_board(board, i)
+
+
+                    if value_pvs >= current:
+                        current = value_pvs
+                        best_row = i
+
+                        if value_pvs >= alpha:
+                            alpha = value_pvs
+
+                            if value_pvs >= beta:
+                                break
+
+
+
+        if call_lvl == 0:
+            update_board(board, 1, best_row)
+
+        return current
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# ------alpha_beta(board, depth, alpha, beta)------
+# Arguments :
+#   board : list of list - describes the current state of the game
+#   depth : int - describes the current depth in the graph (0 is a leaf)
+#   alpha : minimum for the max player
+#   beta : maximum for the min player
+#
+# Description :
+#   algorithm min max improved with pruning alpha beta
+#   recursive algo., simulates all the moves possible for each player, depth first
+#   evaluate if the board is to the advantage of the AI or the human on the last move
+#   pick the best move
+#
+# Return value :
+#   board advantage if depth is 0 :
+#           > 0 : if the board is at the advantage of the AI
+#           < 0 : if the board is at the advantage of the human
+#           0 : if no one is advantaged
+#
+#   max or min of all children moves depending at what depth we are
+
+def alpha_beta(board, depth, alpha, beta, call_lvl=0):
+    nb_rows = len(board[0])
+
+    print(eval_board(board))
+    display_game(board)
+
+    if depth == 0 or check_winner(board) is not False:
+        return eval_board(board)
 
     else:
         best_row = 0
 
         for i in range(nb_rows):
             if row_played_check(board, i):
+                update_board(board, 1 if call_lvl % 2 == 0 else 2, i)
+                value_alphabeta = - alpha_beta(board, depth - 1, -beta, -alpha, call_lvl=call_lvl + 1)
 
-                update_board(board, 1 if depth_max % 2 == depth % 2 else 2, i)
-                value_alphabeta = - alpha_beta(board, depth - 1, -beta, -alpha)
                 undo_board(board, i)
 
-                if value_alphabeta > alpha:
+
+                if value_alphabeta >= alpha:
                     alpha = value_alphabeta
                     best_row = i
 
                     if alpha >= beta:
                         break
 
-        if depth == depth_max:
+
+
+        if call_lvl == 0:
             update_board(board, 1, best_row)
 
         return alpha
@@ -192,7 +270,7 @@ def check_winner(board):
                             still_checking_down_left = False
                         else:
                             if k == 3:  # if the test was passed 3 times, it means we have 4 in a row
-                                print('down left')
+                                # print('down left')
                                 return player_piece_checked
 
                     # --------- --------- ---------
@@ -209,7 +287,7 @@ def check_winner(board):
                             still_checking_down_right = False
                         else:
                             if k == 3:  # if the test was passed 3 times, it means we have 4 in a row
-                                print('down right')
+                                # print('down right')
                                 return player_piece_checked
             else:
 
@@ -228,24 +306,243 @@ def check_winner(board):
 #
 # Description :
 #   evaluate the current state of the board
-#   check if there is a winner or a draw
+#
 #   evaluate if the board is to the advantage of the AI or the human
 #
-# Return value :
-#   tuple (winner, advantage)
-#       winner :
-#           False : if no 4 in a row pieces have been found
-#           1 : if 4 in a row pieces have been found for the player 1
-#           2 : if 4 in a row pieces have been found for the player 2
-#           -1 : if draw
+#   we count for each piece how many same pieces, empty cells and opposite pieces we have aligned with the
+#   starting piece in each direction
+#   if we have aligned with the starting piece (player_piece_check) :
+#       3 others same pieces (win) --> score is (+/-)value_if_win_detected
+#       2 other same pieces & 1 empty --> score increased by 5
+#       1 other same piece & 2 empty --> score increased by 2
+#       at least 1 opposite piece --> score not increased
 #
-#       advantage :
-#           > 0 : if the board is at the advantage of the AI
-#           < 0 : if the board is at the advantage of the human
-#           0 : if no one is advantaged
+#   if the starting piece is an AI piece, we add score to value_board, if it is an human piece, we substract score
+#   to value board
+#
+# Return value :
+#
+#     value_board : int - the higher this value is, the more the board is at the advantage of the AI
 
 
 def eval_board(board):
+    nb_lines = len(board)
+    nb_rows = len(board[0])
+
+    value_board = 0
+
+    i = nb_lines - 1
+    while i >= 0:
+        for j in range(nb_rows):
+
+            player_piece_checked = board[i][j]
+            opposite_piece = 1 if player_piece_checked == 2 else 2
+            score = 0
+
+            if player_piece_checked is not None:
+                
+                up_none, left_none, right_none, down_left_none, down_right_none,\
+                up_left_none, up_right_none = 0, 0, 0, 0, 0, 0, 0
+                up_player, left_player, right_player, down_left_player, down_right_player, \
+                up_left_player, up_right_player = 0, 0, 0, 0, 0, 0, 0
+                up_opposite, left_opposite, right_opposite, down_left_opposite, down_right_opposite, \
+                up_left_opposite, up_right_opposite = 0, 0, 0, 0, 0, 0, 0
+
+                value_if_win_detected = 10000
+
+                for k in range(1, 4):  # k will be used to increment through the board
+
+                    # --------- check up
+
+                    # no need to evaluate if the first piece has less than 4 possible other pieces to connect
+                    if i - 3 >= 0:
+
+                        if board[i - k][j] == player_piece_checked:
+                            up_player += 1
+                        if board[i - k][j] is None:
+                            up_none += 1
+                        elif board[i - k][j] == opposite_piece:
+                            up_opposite += 1
+
+                    # --------- --------- ---------
+
+                    # --------- check right
+
+                    # no need to evaluate if the first piece has less than 4 possible other pieces to connect
+                    if j + 3 < nb_rows:
+
+                        if board[i][j + k] == player_piece_checked:
+                            right_player += 1
+                        if board[i][j + k] is None:
+                            right_none += 1
+                        elif board[i][j + k] == opposite_piece:
+                            right_opposite += 1
+
+                    # --------- --------- ---------
+
+                    # --------- check left
+
+                    # no need to evaluate if the first piece has less than 4 possible other pieces to connect
+                    if j - 3 >= 0:
+
+                        if board[i][j - k] == player_piece_checked:
+                            left_player += 1
+                        if board[i][j - k] is None:
+                            left_none += 1
+                        elif board[i][j - k] == opposite_piece:
+                            left_opposite += 1
+
+                    # --------- --------- ---------
+
+                    # --------- check down left
+
+                    # no need to evaluate if the first piece has less than 4 possible other pieces to connect
+                    if i + 3 < nb_lines and j - 3 >= 0:
+
+                        if board[i + k][j - k] == player_piece_checked:
+                            down_left_player += 1
+                        if board[i + k][j - k] is None:
+                            down_left_none += 1
+                        elif board[i + k][j - k] == opposite_piece:
+                            down_left_opposite += 1
+
+                    # --------- --------- ---------
+
+                    # --------- check down right
+
+                    # no need to evaluate if the first piece has less than 4 possible other pieces to connect
+                    if i + 3 < nb_lines and j + 3 < nb_rows:
+
+                        if board[i + k][j + k] == player_piece_checked:
+                            down_right_player += 1
+                        if board[i + k][j + k] is None:
+                            down_right_none += 1
+                        elif board[i + k][j + k] == opposite_piece:
+                            down_right_opposite += 1
+
+                    # --------- --------- ---------
+
+                    # --------- check up left
+
+                    # no need to evaluate if the first piece has less than 4 possible other pieces to connect
+                    if i - 3 >= 0 and j - 3 >= 0:
+
+                        if board[i - k][j - k] == player_piece_checked:
+                            up_left_player += 1
+                        if board[i - k][j - k] is None:
+                            up_left_none += 1
+                        elif board[i - k][j - k] == opposite_piece:
+                            up_left_opposite += 1
+
+                    # --------- --------- ---------
+
+                    # --------- check up right
+
+                    # no need to evaluate if the first piece has less than 4 possible other pieces to connect
+                    if i - 3 >= 0 and j + 3 < nb_rows:
+
+                        if board[i - k][j + k] == player_piece_checked:
+                            up_right_player += 1
+                        elif board[i - k][j + k] is None:
+                            up_right_none += 1
+                        elif board[i - k][j + k] == opposite_piece:
+                            up_right_opposite += 1
+
+                
+                if up_player == 3 or left_player == 3 or right_player == 3 or down_left_player == 3 or\
+                down_right_player == 3 or up_left_player == 3 or up_right_player == 3:
+                    
+                    return value_if_win_detected if player_piece_checked == 1 else -value_if_win_detected
+
+                # --------- sum score up
+                
+                if up_opposite > 0:
+                    score += 0
+                elif up_player == 2 and up_none == 1:
+                    score += 5
+                elif up_player == 1 and up_none == 2:
+                    score += 2
+
+                # --------- sum score left
+
+                if left_opposite > 0:
+                    score += 0
+                elif left_player == 2 and left_none == 1:
+                    score += 5
+                elif left_player == 1 and left_none == 2:
+                    score += 2
+
+                # --------- sum score right
+
+                if right_opposite > 0:
+                    score += 0
+                elif right_player == 2 and right_none == 1:
+                    score += 5
+                elif right_player == 1 and right_none == 2:
+                    score += 2
+
+                # --------- sum score down_left
+
+                if down_left_opposite > 0:
+                    score += 0
+                elif down_left_player == 2 and down_left_none == 1:
+                    score += 5
+                elif down_left_player == 1 and down_left_none == 2:
+                    score += 2
+
+                # --------- sum score down_right
+
+                if down_right_opposite > 0:
+                    score += 0
+                elif down_right_player == 2 and down_right_none == 1:
+                    score += 5
+                elif down_right_player == 1 and down_right_none == 2:
+                    score += 2
+
+                # --------- sum score up_left
+
+                if up_left_opposite > 0:
+                    score += 0
+                elif up_left_player == 2 and up_left_none == 1:
+                    score += 5
+                elif up_left_player == 1 and up_left_none == 2:
+                    score += 2
+
+                # --------- sum score up_right
+
+                if up_right_opposite > 0:
+                    score += 0
+                elif up_right_player == 2 and up_right_none == 1:
+                    score += 5
+                elif up_right_player == 1 and up_right_none == 2:
+                    score += 2
+
+                # if the starting piece was an AI one, we will add the score
+                # otherwise, we subtract it
+                sign = 1 if player_piece_checked == 1 else -1
+                value_board += sign * score
+
+    return value_board
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# ------eval_board_old()------
+# Arguments :
+#   board : list of list - describes the current state of the game
+#
+# Description :
+#   evaluate the current state of the board
+#   evaluate if the board is to the advantage of the AI or the human
+#
+# Return value :
+#   advantage :
+#       > 0 : if the board is at the advantage of the AI
+#       < 0 : if the board is at the advantage of the human
+#       0 : if no one is advantaged
+
+
+def eval_board_old(board):
     nb_lines = len(board)
     nb_rows = len(board[0])
 
@@ -276,6 +573,8 @@ def eval_board(board):
                 still_checking_up_left = True
                 still_checking_up_right = True
 
+                ret_value_if_win_detected = 1000 if player_piece_checked == 1 else -1000
+
                 for k in range(1, 4):  # k will be used to increment through the board
 
                     # --------- check up
@@ -296,7 +595,7 @@ def eval_board(board):
                         else:
                             max_up += 1
                             if k == 3:  # if the test was passed 3 times, it means we have 4 in a row
-                                return 4 if player_piece_checked == 1 else -4
+                                return ret_value_if_win_detected
 
                     # --------- --------- ---------
 
@@ -320,27 +619,27 @@ def eval_board(board):
                                 elif board[i][j + l] == player_piece_checked:
                                     max_right += 0.2
 
-                                elif board[i][j + l] is None:
-                                    # remove .05 for each empty cell under each empty cell aligned
-                                    m = i + 1
-                                    while m < nb_lines:
-                                        if board[m][j + l] is None:
-                                            max_right -= 0.05
-                                        else:
-                                            break
+                                # elif board[i][j + l] is None:
+                                #     # remove .05 for each empty cell under each empty cell aligned
+                                #     m = i + 1
+                                #     while m < nb_lines:
+                                #         if board[m][j + l] is None:
+                                #             max_right -= 0.05
+                                #         else:
+                                #             break
+                                #
+                                #         m += 1
 
-                                        m += 1
-
-                            # remove .05 for each empty cell under the first empty cell
-                            # on the right of the connected pieces
-                            l = i + 1
-                            while l < nb_lines:
-                                if board[l][j + k] is None:
-                                    max_right -= 0.05
-                                else:
-                                    break
-
-                                l += 1
+                            # # remove .05 for each empty cell under the first empty cell
+                            # # on the right of the connected pieces
+                            # l = i + 1
+                            # while l < nb_lines:
+                            #     if board[l][j + k] is None:
+                            #         max_right -= 0.05
+                            #     else:
+                            #         break
+                            #
+                            #     l += 1
 
                         elif board[i][j + k] != player_piece_checked:
                             max_right = 1
@@ -348,7 +647,7 @@ def eval_board(board):
                         else:
                             max_right += 1
                             if k == 3:  # if the test was passed 3 times, it means we have 4 in a row
-                                return 4 if player_piece_checked == 1 else -4
+                                return ret_value_if_win_detected
 
                     # --------- --------- ---------
 
@@ -364,7 +663,7 @@ def eval_board(board):
                             # add .2 for each same-nature piece than player_piece_checked
                             # on the same line but not connected yet
                             # make max_left at 1 if there is a not-same-nature piece on the same line
-                            if k == 1 or k == 2:
+                            for l in range(k + 1, 4):
                                 if board[i][j - l] == (1 if player_piece_checked == 2 else 2):
                                     max_left = 1
                                     break
@@ -372,27 +671,27 @@ def eval_board(board):
                                 elif board[i][j - l] == player_piece_checked:
                                     max_left += 0.2
 
-                                elif board[i][j - l] is None:
-                                    # remove .05 for each empty cell under each empty cell aligned
-                                    m = i + 1
-                                    while m < nb_lines:
-                                        if board[m][j - l] is None:
-                                            max_left -= 0.05
-                                        else:
-                                            break
+                                # elif board[i][j - l] is None:
+                                #     # remove .05 for each empty cell under each empty cell aligned
+                                #     m = i + 1
+                                #     while m < nb_lines:
+                                #         if board[m][j - l] is None:
+                                #             max_left -= 0.05
+                                #         else:
+                                #             break
+                                #
+                                #         m += 1
 
-                                        m += 1
-
-                            # remove .05 for each empty cell under the first empty cell
-                            # on the left of the connected pieces
-                            l = i + 1
-                            while l < nb_lines:
-                                if board[l][j - k] is None:
-                                    max_left -= 0.05
-                                else:
-                                    break
-
-                                l += 1
+                            # # remove .05 for each empty cell under the first empty cell
+                            # # on the left of the connected pieces
+                            # l = i + 1
+                            # while l < nb_lines:
+                            #     if board[l][j - k] is None:
+                            #         max_left -= 0.05
+                            #     else:
+                            #         break
+                            #
+                            #     l += 1
 
                         elif board[i][j - k] != player_piece_checked:
                             max_left = 1
@@ -400,7 +699,7 @@ def eval_board(board):
                         else:
                             max_left += 1
                             if k == 3:  # if the test was passed 3 times, it means we have 4 in a row
-                                return 4 if player_piece_checked == 1 else -4
+                                return ret_value_if_win_detected
 
                     # --------- --------- ---------
 
@@ -431,7 +730,7 @@ def eval_board(board):
                         else:
                             max_down_left += 1
                             if k == 3:  # if the test was passed 3 times, it means we have 4 in a row
-                                return 4 if player_piece_checked == 1 else -4
+                                return ret_value_if_win_detected
 
                     # --------- --------- ---------
 
@@ -462,7 +761,7 @@ def eval_board(board):
                         else:
                             max_down_right += 1
                             if k == 3:  # if the test was passed 3 times, it means we have 4 in a row
-                                return 4 if player_piece_checked == 1 else -4
+                                return ret_value_if_win_detected
 
                     # --------- --------- ---------
 
@@ -493,7 +792,7 @@ def eval_board(board):
                         else:
                             max_up_left += 1
                             if k == 3:  # if the test was passed 3 times, it means we have 4 in a row
-                                return 4 if player_piece_checked == 1 else -4
+                                return ret_value_if_win_detected
 
                     # --------- --------- ---------
 
@@ -524,9 +823,9 @@ def eval_board(board):
                         else:
                             max_up_right += 1
                             if k == 3:  # if the test was passed 3 times, it means we have 4 in a row
-                                return 4 if player_piece_checked == 1 else -4
+                                return ret_value_if_win_detected
 
-                if player_piece_checked == 1:  # AI always plays first
+                if player_piece_checked == 1:  # AI is always player 1
                     max_ai = max([max_ai, max([max_up, max_left, max_right, max_down_left, max_down_right,
                                                max_up_left, max_up_right])])
                 else:
@@ -535,10 +834,10 @@ def eval_board(board):
 
         i -= 1
 
-    print('max ai : ', max_ai)
-    print('max human : ', max_human)
-    print()
-    print('max_ai - max_human : ', max_ai - max_human)
+    # print('max ai : ', max_ai)
+    # print('max human : ', max_human)
+    # print()
+    # print('max_ai - max_human : ', max_ai - max_human)
 
     return max_ai - max_human
 
@@ -577,8 +876,10 @@ def game():
     while not winner:
 
         if current_player == 1:
-            # negmax(board, 8)
-            player_round(board, current_player)
+            # print(pvs(board, 11, -10000000, 10000000))
+            print(alpha_beta(board, 8, -10000000, 10000000))
+            # print('negmax : ', negmax(board, 8))
+            # player_round(board, current_player)
         else:
             player_round(board, current_player)
 
