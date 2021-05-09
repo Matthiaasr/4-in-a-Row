@@ -108,11 +108,13 @@ def pvs(board, depth, alpha, beta, call_lvl=0):
 def alpha_beta(board, depth, alpha, beta, call_lvl=0):
     nb_rows = len(board[0])
 
-    print(eval_board(board))
-    display_game(board)
+    # print(eval_board(board))
+    # display_game(board)
 
     if depth == 0 or check_winner(board) is not False:
-        return eval_board(board)
+        ev = eval_board(board)
+        print(ev)
+        return ev
 
     else:
         best_row = 0
@@ -123,6 +125,9 @@ def alpha_beta(board, depth, alpha, beta, call_lvl=0):
                 value_alphabeta = - alpha_beta(board, depth - 1, -beta, -alpha, call_lvl=call_lvl + 1)
 
                 undo_board(board, i)
+
+                if call_lvl == 0:
+                    print('row : ', i, ' | value_alphabeta : ', value_alphabeta)
 
 
                 if value_alphabeta >= alpha:
@@ -341,12 +346,9 @@ def eval_board(board):
 
             if player_piece_checked is not None:
                 
-                up_none, left_none, right_none, down_left_none, down_right_none,\
-                up_left_none, up_right_none = 0, 0, 0, 0, 0, 0, 0
-                up_player, left_player, right_player, down_left_player, down_right_player, \
-                up_left_player, up_right_player = 0, 0, 0, 0, 0, 0, 0
-                up_opposite, left_opposite, right_opposite, down_left_opposite, down_right_opposite, \
-                up_left_opposite, up_right_opposite = 0, 0, 0, 0, 0, 0, 0
+                up_none, left_none, right_none, up_left_none, up_right_none = 0, 0, 0, 0, 0
+                up_player, left_player, right_player, up_left_player, up_right_player = 0, 0, 0, 0, 0
+                up_opposite, left_opposite, right_opposite, up_left_opposite, up_right_opposite = 0, 0, 0, 0, 0
 
                 value_if_win_detected = 10000
 
@@ -394,34 +396,6 @@ def eval_board(board):
 
                     # --------- --------- ---------
 
-                    # --------- check down left
-
-                    # no need to evaluate if the first piece has less than 4 possible other pieces to connect
-                    if i + 3 < nb_lines and j - 3 >= 0:
-
-                        if board[i + k][j - k] == player_piece_checked:
-                            down_left_player += 1
-                        if board[i + k][j - k] is None:
-                            down_left_none += 1
-                        elif board[i + k][j - k] == opposite_piece:
-                            down_left_opposite += 1
-
-                    # --------- --------- ---------
-
-                    # --------- check down right
-
-                    # no need to evaluate if the first piece has less than 4 possible other pieces to connect
-                    if i + 3 < nb_lines and j + 3 < nb_rows:
-
-                        if board[i + k][j + k] == player_piece_checked:
-                            down_right_player += 1
-                        if board[i + k][j + k] is None:
-                            down_right_none += 1
-                        elif board[i + k][j + k] == opposite_piece:
-                            down_right_opposite += 1
-
-                    # --------- --------- ---------
-
                     # --------- check up left
 
                     # no need to evaluate if the first piece has less than 4 possible other pieces to connect
@@ -449,8 +423,8 @@ def eval_board(board):
                             up_right_opposite += 1
 
                 
-                if up_player == 3 or left_player == 3 or right_player == 3 or down_left_player == 3 or\
-                down_right_player == 3 or up_left_player == 3 or up_right_player == 3:
+                if up_player == 3 or left_player == 3 or right_player == 3 or\
+                        up_left_player == 3 or up_right_player == 3:
                     
                     return value_if_win_detected if player_piece_checked == 1 else -value_if_win_detected
 
@@ -481,24 +455,6 @@ def eval_board(board):
                 elif right_player == 1 and right_none == 2:
                     score += 2
 
-                # --------- sum score down_left
-
-                if down_left_opposite > 0:
-                    score += 0
-                elif down_left_player == 2 and down_left_none == 1:
-                    score += 5
-                elif down_left_player == 1 and down_left_none == 2:
-                    score += 2
-
-                # --------- sum score down_right
-
-                if down_right_opposite > 0:
-                    score += 0
-                elif down_right_player == 2 and down_right_none == 1:
-                    score += 5
-                elif down_right_player == 1 and down_right_none == 2:
-                    score += 2
-
                 # --------- sum score up_left
 
                 if up_left_opposite > 0:
@@ -521,6 +477,8 @@ def eval_board(board):
                 # otherwise, we subtract it
                 sign = 1 if player_piece_checked == 1 else -1
                 value_board += sign * score
+
+        i -= 1
 
     return value_board
 
@@ -877,7 +835,7 @@ def game():
 
         if current_player == 1:
             # print(pvs(board, 11, -10000000, 10000000))
-            print(alpha_beta(board, 8, -10000000, 10000000))
+            print(alpha_beta(board, 12, -10000000, 10000000))
             # print('negmax : ', negmax(board, 8))
             # player_round(board, current_player)
         else:
