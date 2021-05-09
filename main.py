@@ -4,17 +4,7 @@
 #
 # ---------------------------------------------------------------------------------------------------------------------
 
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
-import dash_cytoscape as cyto
-from dash.dependencies import Input, Output
-import plotly.express as px
-
-import string
-import random
-def id_generator(size=16, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
-    return ''.join(random.choice(chars) for _ in range(size))
+# import time
 
 # ---------------------------------------------------------------------------------------------------------------------
 #
@@ -94,9 +84,6 @@ def pvs(board, depth, alpha, beta, call_lvl=0):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-# elem = [{'data': {'id': 'root', 'label': 'root'}}]
-elem = []
-
 # ------alpha_beta(board, depth, alpha, beta)------
 # Arguments :
 #   board : list of list - describes the current state of the game
@@ -119,8 +106,6 @@ elem = []
 #   max or min of all children moves depending at what depth we are
 
 def alpha_beta(board, depth, alpha, beta, call_lvl=0):
-    global elem
-
     nb_rows = len(board[0])
 
     # print(eval_board(board))
@@ -128,31 +113,21 @@ def alpha_beta(board, depth, alpha, beta, call_lvl=0):
 
     if depth == 0 or check_winner(board) is not False:
         ev = eval_board(board)
-        # print(ev)
-        id_this_node = str(depth) + '-' + id_generator()
-        elem += [{'data': {'id': id_this_node, 'label': str(ev)}}]
-        return ev, id_this_node
+        print(ev)
+        return ev
 
     else:
         best_row = 0
 
-        id_this_node = str(depth) + '-' + id_generator() if call_lvl > 0 else 'root'
-
-        
         for i in range(nb_rows):
             if row_played_check(board, i):
                 update_board(board, 1 if call_lvl % 2 == 0 else 2, i)
-
-                ret = alpha_beta(board, depth - 1, -beta, -alpha, call_lvl=call_lvl + 1)
-                value_alphabeta = - ret[0]
-                id_child = ret[1]
+                value_alphabeta = - alpha_beta(board, depth - 1, -beta, -alpha, call_lvl=call_lvl + 1)
 
                 undo_board(board, i)
 
-                elem += [{'data': {'source': id_this_node, 'target': id_child}}]
-
-                # if call_lvl == 0:
-                #     print('row : ', i, ' | value_alphabeta : ', value_alphabeta)
+                if call_lvl == 0:
+                    print('row : ', i, ' | value_alphabeta : ', value_alphabeta)
 
 
                 if value_alphabeta >= alpha:
@@ -167,9 +142,7 @@ def alpha_beta(board, depth, alpha, beta, call_lvl=0):
         if call_lvl == 0:
             update_board(board, 1, best_row)
 
-        elem += [{'data': {'id': id_this_node, 'label': 'root' if id_this_node == 'root' else str(alpha)}}]
-
-        return alpha, id_this_node
+        return alpha
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -194,45 +167,31 @@ def alpha_beta(board, depth, alpha, beta, call_lvl=0):
 
 
 def negmax(board, depth, call_lvl=0):
-    global elem
 
     nb_rows = len(board[0])
 
     if depth == 0 or check_winner(board) is not False:
-        ev = eval_board(board)
-        # print(ev)
-        id_this_node = str(depth) + '-' + id_generator()
-        elem += [{'data': {'id': id_this_node, 'label': str(ev)}}]
-        return ev, id_this_node
+        return eval_board(board)
 
     else:
         max_eval = - 100000000
         best_row = 0
 
-        id_this_node = str(depth) + '-' + id_generator() if call_lvl > 0 else 'root'
-
         for i in range(nb_rows):
             if row_played_check(board, i):
                 update_board(board, 1 if call_lvl % 2 == 0 else 2, i)
 
-                ret = negmax(board, depth - 1, call_lvl=call_lvl + 1)
-                value_negmax = - ret[0]
-                id_child = ret[1]
-
-                undo_board(board, i)
-
-                elem += [{'data': {'source': id_this_node, 'target': id_child}}]
-
+                value_negmax = - negmax(board, depth - 1, call_lvl=call_lvl + 1)
                 if value_negmax > max_eval:
                     max_eval = value_negmax
                     best_row = i
 
+                undo_board(board, i)
+
         if call_lvl == 0:
             update_board(board, 1, best_row)
 
-        elem += [{'data': {'id': id_this_node, 'label': 'root' if id_this_node == 'root' else str(max_eval)}}]
-
-        return max_eval, id_this_node
+        return max_eval
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -847,8 +806,6 @@ def eval_board_old(board):
 #
 # ---------------------------------------------------------------------------------------------------------------------
 
-
-
 # ------game()------
 # Arguments :
 #
@@ -859,8 +816,6 @@ def eval_board_old(board):
 #
 
 def game():
-    global elem
-
     # ------------------- Game initiation
 
     nb_rows = 7
@@ -879,26 +834,10 @@ def game():
     while not winner:
 
         if current_player == 1:
-
             # print(pvs(board, 11, -10000000, 10000000))
-            alpha_beta(board, 4, -10000000, 10000000)
-            # print('negmax : ', negmax(board, 2))
+            print(alpha_beta(board, 12, -10000000, 10000000))
+            # print('negmax : ', negmax(board, 8))
             # player_round(board, current_player)
-
-            app = dash.Dash(__name__)
-
-            app.layout = html.Div([
-                html.P("Dash Cytoscape:"),
-                cyto.Cytoscape(
-                    id='cytoscape',
-                    elements=elem,
-                    layout={'name': 'breadthfirst',
-                            'roots': '[id = "root"]'},
-                    style={'width': '4000px', 'height': '4000px'}
-                )
-            ])
-
-            app.run_server(debug=True)
         else:
             player_round(board, current_player)
 
@@ -1064,6 +1003,4 @@ def display_game(board):
 
 
 if __name__ == '__main__':
-
-
     game()
